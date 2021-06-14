@@ -1,0 +1,12 @@
+apiVersion: v2
+name: filecoin-indexer
+description: A Helm chart for Kubernetes
+type: application
+version: 0.1.0
+dependencies:
+  - name: common
+    repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+    version: "0.1.0"
+  - name: redis
+    repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+    version: "0.1.0"

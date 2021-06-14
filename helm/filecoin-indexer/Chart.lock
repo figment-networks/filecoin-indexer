@@ -1,0 +1,9 @@
+dependencies:
+- name: common
+  repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+  version: 0.1.0
+- name: redis
+  repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+  version: 0.1.0
+digest: sha256:c3031372fc3455d73ef33265a4a0fad2f28e27f6f9c59cb6ccc2c62e90a95950
+generated: "2021-06-11T08:52:02.635783185-06:00"

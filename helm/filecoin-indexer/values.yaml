@@ -1,0 +1,181 @@
+global:
+  labels:
+    team: indexers
+    severity: noncritical
+  annotations:
+    figment.io/github_repository: github.com/figment-networks/filecoin-indexer
+  env:
+    DATABASE_DSN:
+      secretsManagerKeyRef:
+        key: production/indexers/filecoin-indexer
+        property: db_dsn
+    RPC_ENDPOINT: 51.222.104.211:1234 # dh--filecoin-node--4
+    ROLLBAR_ENV: production
+    ROLLBAR_TOKEN:
+      secretsManagerKeyRef:
+        key: prod/indexers/common
+        property: rollbar_token
+    DEBUG: "true"
+    REDIS_URL: filecoin-indexer-redis:6379
+
+redis:
+  name: filecoin-indexer-redis
+  resources:
+    requests:
+      memory: 8Gi
+    limits:
+      memory: 16Gi
+  config:
+    maxmemory: 8gb
+
+jobs:
+  filecoin-indexer-migrations:
+    annotations:
+      helm.sh/hook: pre-install,pre-upgrade
+    pod:
+      containers:
+        filecoin-indexer-migration:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=migrate
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+
+deployments:
+  filecoin-indexer-fetcher-manager:
+    replicas: 1
+    pod:
+      containers:
+        filecoin-indexer-fetcher-manager:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=fetcher
+            - -mode=manager
+          env:
+            INITIAL_HEIGHT: 0
+            BATCH_SIZE: 100
+            WORKERS: "filecoin-indexer-fetcher-worker-0:7000 filecoin-indexer-fetcher-worker-1:7000"
+          livenessProbe:
+            disabled: true
+          readinessProbe:
+            disabled: true
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+
+  filecoin-indexer-fetcher-worker-0:
+    service:
+      ports:
+        http:
+          port: 7000
+          targetPort: 7000
+          protocol: TCP
+    replicas: 1
+    pod:
+      containers:
+        filecoin-indexer-fetcher-worker:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=fetcher
+            - -mode=worker
+          env:
+            RPC_TIMEOUT: 1m
+            WORKER_ADDR: 0.0.0.0
+          livenessProbe:
+            disabled: true
+          readinessProbe:
+            disabled: true
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+  filecoin-indexer-fetcher-worker-1:
+    service:
+      ports:
+        http:
+          port: 7000
+          targetPort: 7000
+          protocol: TCP
+    replicas: 1
+    pod:
+      containers:
+        filecoin-indexer-fetcher-worker:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=fetcher
+            - -mode=worker
+          env:
+            RPC_TIMEOUT: 1m
+            RPC_ENDPOINT: 51.222.80.28:1234 # dh--filecoin-node--5
+            WORKER_ADDR: 0.0.0.0
+          livenessProbe:
+            disabled: true
+          readinessProbe:
+            disabled: true
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+
+  filecoin-indexer-indexer:
+    replicas: 1
+    pod:
+      containers:
+        filecoin-indexer-indexer:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=indexer
+          env:
+            RPC_TIMEOUT: 1m
+            INITIAL_HEIGHT: 0
+            BATCH_SIZE: 100
+          livenessProbe:
+            disabled: true
+          readinessProbe:
+            disabled: true
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+
+  filecoin-indexer-server:
+    service:
+      ports:
+        http:
+          port: 8080
+          targetPort: 8080
+          protocol: TCP
+    replicas: 1
+    pod:
+      containers:
+        filecoin-indexer:
+          command:
+            - /app/bin/filecoin-indexer
+            - -cmd=server
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi

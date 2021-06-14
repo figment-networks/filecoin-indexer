@@ -21,13 +21,17 @@ RUN make build
 # ------------------------------------------------------------------------------
 # Target Image
 # ------------------------------------------------------------------------------
-FROM alpine:3.10 AS release
+FROM alpine:3.10 AS runner
+
+RUN adduser --system --uid 1234 figment
+
+USER 1234
 
 WORKDIR /app
 
-COPY --from=build /build/filecoin-indexer /app/filecoin-indexer
+COPY --from=build /build/filecoin-indexer /app/bin/filecoin-indexer
 COPY --from=build /build/migrations /app/migrations
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/filecoin-indexer"]
+CMD ["/app/bin/filecoin-indexer"]
